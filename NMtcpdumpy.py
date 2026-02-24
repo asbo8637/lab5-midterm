@@ -25,11 +25,11 @@ def main() -> int:
         if p.haslayer(IP) and p.haslayer(ICMP):
             ic = p[ICMP]
             if int(getattr(ic, "type", -1)) == 8:
-                src_ip = normalize_ip(p[IP].src)
+                src_ip = p[IP].src
                 macs[src_ip].add(src_mac)
             continue
         if p.haslayer(IPv6) and p.haslayer(ICMPv6EchoRequest):
-            src_ip = normalize_ip(p[IPv6].src)
+            src_ip = p[IPv6].src
             macs[src_ip].add(src_mac)
             continue
 
