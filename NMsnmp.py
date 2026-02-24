@@ -48,6 +48,7 @@ def get_transport_target(host: str):
 
 
 
+
 async def snmp_walk(host: str, oid: str) -> List[Tuple[str, str]]:
     rows: List[Tuple[str, str]] = []
     iterator = next_cmd(
@@ -65,9 +66,9 @@ async def snmp_walk(host: str, oid: str) -> List[Tuple[str, str]]:
     return rows
 
 
-def parse_interface_status(host: str) -> Dict[str, str]:
-    descr = snmp_walk(host, IF_DESCR_OID)
-    status = snmp_walk(host, IF_OPER_STATUS_OID)
+async def parse_interface_status(host: str) -> Dict[str, str]:
+    descr = await snmp_walk(host, IF_DESCR_OID)
+    status = await snmp_walk(host, IF_OPER_STATUS_OID)
 
     index: Dict[str, str] = {}
     for oid, value in descr:
@@ -110,8 +111,8 @@ def decode_ip(oid: str) -> Tuple[str, str]:
     return "other", ""
 
 
-def parse_ip_addresses(host: str) -> Tuple[List[str], List[str]]:
-    rows = snmp_walk(host, IP_ADDR_IFINDEX_OID)
+async def parse_ip_addresses(host: str) -> Tuple[List[str], List[str]]:
+    rows = await snmp_walk(host, IP_ADDR_IFINDEX_OID)
 
     ipv4_addresses = set()
     ipv6_addresses = set()
