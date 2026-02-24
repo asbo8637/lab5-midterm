@@ -35,26 +35,35 @@ REPORT_FILE = "report.txt"
 
 
 
-def get_transport_target(host: str):
+async def get_transport_target(host: str):
     try:
         ip_obj = ipaddress.ip_address(host.split("%", 1)[0])
     except ValueError:
         ip_obj = None
 
     if isinstance(ip_obj, ipaddress.IPv6Address):
-        return Udp6TransportTarget((host, SNMP_PORT), SNMP_TIMEOUT_SECONDS, SNMP_RETRIES)
+        return await Udp6TransportTarget.create(
+            (host, SNMP_PORT),
+            timeout=SNMP_TIMEOUT_SECONDS,
+            retries=SNMP_RETRIES,
+        )
 
-    return UdpTransportTarget((host, SNMP_PORT), SNMP_TIMEOUT_SECONDS, SNMP_RETRIES)
+    return await UdpTransportTarget.create(
+        (host, SNMP_PORT),
+        timeout=SNMP_TIMEOUT_SECONDS,
+        retries=SNMP_RETRIES,
+    )
 
 
 
 
 async def snmp_walk(host: str, oid: str) -> List[Tuple[str, str]]:
     rows: List[Tuple[str, str]] = []
+    transport_target = await get_transport_target(host)
     iterator = next_cmd(
         SnmpEngine(),
         CommunityData(SNMP_COMMUNITY, mpModel=1),
-        get_transport_target(host),
+        transport_target,
         ContextData(),
         ObjectType(ObjectIdentity(oid)),
         lexicographicMode=False,
