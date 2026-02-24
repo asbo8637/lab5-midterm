@@ -26,11 +26,23 @@ REPORT_FILE = "report.txt"
 
 
 def get_transport_target(host: str):
-    return Udp6TransportTarget(
-        (host, SNMP_PORT),
-        timeout=SNMP_TIMEOUT_SECONDS,
-        retries=SNMP_RETRIES,
-    )
+    try:
+        ip_obj = ipaddress.ip_address(host.split("%", 1)[0])
+    except ValueError:
+        ip_obj = None
+
+    if isinstance(ip_obj, ipaddress.IPv6Address):
+        return Udp6TransportTarget(
+            (host, SNMP_PORT),
+            timeout=SNMP_TIMEOUT_SECONDS,
+            retries=SNMP_RETRIES,
+        )
+    else:
+        return UdpTransportTarget(
+            (host, SNMP_PORT),
+            timeout=SNMP_TIMEOUT_SECONDS,
+            retries=SNMP_RETRIES,
+        )
 
 def snmp_walk(host: str, oid: str) -> List[Tuple[str, str]]:
     rows: List[Tuple[str, str]] = []
@@ -76,9 +88,15 @@ def decode_ip(oid: str) -> Tuple[str, str]:
     suffix = oid[len(base) :]
     parts = [int(x) for x in suffix.split(".") if x]
 
+    if len(parts) < 2:
+        return "other", ""
+
     addr_type = parts[0]
     addr_len = parts[1]
     raw = parts[2 : 2 + addr_len]
+
+    if len(raw) != addr_len:
+        return "other", ""
 
     if addr_type == 1 and addr_len == 4:
         return "ipv4", str(ipaddress.IPv4Address(bytes(raw)))
