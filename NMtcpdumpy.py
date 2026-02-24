@@ -10,12 +10,6 @@ FILE = "ping_capture.pcap"
 R2_IP = "2001:db8:1:0:c802:31ff:feb1:0"
 R3_IP = "2001:db8:1:0:c803:31ff:fec0:0"
 
-def normalize_ip(ip: str) -> str:
-    try:
-        return str(ipaddress.ip_address(ip))
-    except ValueError:
-        return ip.lower()
-
 def main() -> int:
     packets = rdpcap(FILE)
     macs = defaultdict(set)
@@ -39,8 +33,8 @@ def main() -> int:
             macs[src_ip].add(src_mac)
             continue
 
-    r2_macs = sorted(macs.get(normalize_ip(R2_IP), set()))
-    r3_macs = sorted(macs.get(normalize_ip(R3_IP), set()))
+    r2_macs = sorted(macs.get(R2_IP, set()))
+    r3_macs = sorted(macs.get(R3_IP, set()))
     if r2_macs:
         print(f"R2 at {R2_IP}: {', '.join(r2_macs)}")
     else:
