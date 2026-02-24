@@ -3,7 +3,16 @@ import ipaddress
 import json
 from typing import Dict, List, Tuple
 
-from pysnmp.hlapi import (CommunityData, ContextData, ObjectIdentity, ObjectType, SnmpEngine, UdpTransportTarget, Udp6TransportTarget, nextCmd)
+from pysnmp.hlapi.v3arch import (
+    CommunityData,
+    ContextData,
+    ObjectIdentity,
+    ObjectType,
+    SnmpEngine,
+    UdpTransportTarget,
+    Udp6TransportTarget,
+    nextCmd,
+)
 
 ROUTERS = {
     "R1": "2001:db8:10::1",
