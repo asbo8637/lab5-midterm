@@ -4,30 +4,16 @@ import ipaddress
 import json
 from typing import Dict, List, Tuple
 
-try:
-    from pysnmp.hlapi.v3arch.asyncio import (
-        CommunityData,
-        ContextData,
-        ObjectIdentity,
-        ObjectType,
-        SnmpEngine,
-        UdpTransportTarget,
-        Udp6TransportTarget,
-        next_cmd,
-    )
-    USE_ASYNC_SNMP = True
-except ImportError:
-    from pysnmp.hlapi import (
-        CommunityData,
-        ContextData,
-        ObjectIdentity,
-        ObjectType,
-        SnmpEngine,
-        UdpTransportTarget,
-        Udp6TransportTarget,
-        nextCmd,
-    )
-    USE_ASYNC_SNMP = False
+from pysnmp.hlapi.v3arch.asyncio import (
+    CommunityData,
+    ContextData,
+    ObjectIdentity,
+    ObjectType,
+    SnmpEngine,
+    UdpTransportTarget,
+    Udp6TransportTarget,
+    next_cmd,
+)
 
 ROUTERS = {
     "R1": "2001:db8:10::1",
@@ -56,19 +42,13 @@ def get_transport_target(host: str):
         ip_obj = None
 
     if isinstance(ip_obj, ipaddress.IPv6Address):
-        return Udp6TransportTarget(
-            (host, SNMP_PORT),
-            timeout=SNMP_TIMEOUT_SECONDS,
-            retries=SNMP_RETRIES,
-        )
-    else:
-        return UdpTransportTarget(
-            (host, SNMP_PORT),
-            timeout=SNMP_TIMEOUT_SECONDS,
-            retries=SNMP_RETRIES,
-        )
+        return Udp6TransportTarget((host, SNMP_PORT), SNMP_TIMEOUT_SECONDS, SNMP_RETRIES)
 
-async def snmp_walk_async(host: str, oid: str) -> List[Tuple[str, str]]:
+    return UdpTransportTarget((host, SNMP_PORT), SNMP_TIMEOUT_SECONDS, SNMP_RETRIES)
+
+
+
+async def snmp_walk(host: str, oid: str) -> List[Tuple[str, str]]:
     rows: List[Tuple[str, str]] = []
     iterator = next_cmd(
         SnmpEngine(),
@@ -79,26 +59,6 @@ async def snmp_walk_async(host: str, oid: str) -> List[Tuple[str, str]]:
         lexicographicMode=False,
     )
     async for _, _, _, var_binds in iterator:
-        for var_bind in var_binds:
-            rows.append((var_bind[0].prettyPrint(), var_bind[1].prettyPrint()))
-
-    return rows
-
-
-def snmp_walk(host: str, oid: str) -> List[Tuple[str, str]]:
-    if USE_ASYNC_SNMP:
-        return asyncio.run(snmp_walk_async(host, oid))
-
-    rows: List[Tuple[str, str]] = []
-    iterator = nextCmd(
-        SnmpEngine(),
-        CommunityData(SNMP_COMMUNITY, mpModel=1),
-        get_transport_target(host),
-        ContextData(),
-        ObjectType(ObjectIdentity(oid)),
-        lexicographicMode=False,
-    )
-    for _, _, _, var_binds in iterator:
         for var_bind in var_binds:
             rows.append((var_bind[0].prettyPrint(), var_bind[1].prettyPrint()))
 
