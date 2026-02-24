@@ -131,9 +131,9 @@ async def parse_ip_addresses(host: str) -> Tuple[List[str], List[str]]:
     return sorted(ipv4_addresses), sorted(ipv6_addresses)
 
 
-def collect_router_data(host: str) -> Dict[str, object]:
-    ipv4_addresses, ipv6_addresses = parse_ip_addresses(host)
-    interface_status = parse_interface_status(host)
+async def collect_router_data(host: str) -> Dict[str, object]:
+    ipv4_addresses, ipv6_addresses = await parse_ip_addresses(host)
+    interface_status = await parse_interface_status(host)
 
     return {
         "ipv4_addresses": ipv4_addresses,
@@ -142,11 +142,11 @@ def collect_router_data(host: str) -> Dict[str, object]:
     }
 
 
-def main() -> int:
+async def main() -> int:
     result: Dict[str, object] = {}
 
     for router_name, host in ROUTERS.items():
-        result[router_name] = collect_router_data(host)
+        result[router_name] = await collect_router_data(host)
 
     with open(REPORT_FILE, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2)
@@ -156,4 +156,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(asyncio.run(main()))
