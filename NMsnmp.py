@@ -58,44 +58,51 @@ async def get_transport_target(host: str):
 
 
 async def snmp_walk(host: str, oid: str) -> List[Tuple[str, str]]:
-    rows: List[Tuple[str, str]] = []
     transport_target = await get_transport_target(host)
     engine = SnmpEngine()
-    base_oid = oid + "."
-    current_oid = oid
+    base_oid_tuple = tuple(int(part) for part in oid.split("."))
 
-    while True:
-        error_indication, error_status, error_index, var_binds = await next_cmd(
-            engine,
-            CommunityData(SNMP_COMMUNITY, mpModel=1),
-            transport_target,
-            ContextData(),
-            ObjectType(ObjectIdentity(current_oid)),
-            lexicographicMode=False,
-        )
+    for mp_model in (1, 0):
+        rows: List[Tuple[str, str]] = []
+        current_oid = oid
 
-        if error_indication:
-            break
-        if error_status or not var_binds:
-            break
+        while True:
+            error_indication, error_status, error_index, var_binds = await next_cmd(
+                engine,
+                CommunityData(SNMP_COMMUNITY, mpModel=mp_model),
+                transport_target,
+                ContextData(),
+                ObjectType(ObjectIdentity(current_oid)),
+                lexicographicMode=False,
+            )
 
-        stop_walk = False
-        for var_bind in var_binds:
-            name = var_bind[0].prettyPrint()
-            if not name.startswith(base_oid):
-                stop_walk = True
+            if error_indication:
+                rows = []
                 break
-            rows.append((name, var_bind[1].prettyPrint()))
+            if error_status or not var_binds:
+                break
 
-        if stop_walk:
-            break
+            stop_walk = False
+            for var_bind in var_binds:
+                name_tuple = tuple(var_bind[0])
+                if name_tuple[: len(base_oid_tuple)] != base_oid_tuple:
+                    stop_walk = True
+                    break
+                name = ".".join(str(part) for part in name_tuple)
+                rows.append((name, var_bind[1].prettyPrint()))
 
-        next_oid = var_binds[-1][0].prettyPrint()
-        if next_oid == current_oid:
-            break
-        current_oid = next_oid
+            if stop_walk:
+                break
 
-    return rows
+            next_oid = ".".join(str(part) for part in tuple(var_binds[-1][0]))
+            if next_oid == current_oid:
+                break
+            current_oid = next_oid
+
+        if rows:
+            return rows
+
+    return []
 
 
 async def parse_interface_status(host: str) -> Dict[str, str]:
