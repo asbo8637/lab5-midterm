@@ -60,17 +60,40 @@ async def get_transport_target(host: str):
 async def snmp_walk(host: str, oid: str) -> List[Tuple[str, str]]:
     rows: List[Tuple[str, str]] = []
     transport_target = await get_transport_target(host)
-    iterator = await next_cmd(
-        SnmpEngine(),
-        CommunityData(SNMP_COMMUNITY, mpModel=1),
-        transport_target,
-        ContextData(),
-        ObjectType(ObjectIdentity(oid)),
-        lexicographicMode=False,
-    )
-    async for _, _, _, var_binds in iterator:
+    engine = SnmpEngine()
+    base_oid = oid + "."
+    current_oid = oid
+
+    while True:
+        error_indication, error_status, error_index, var_binds = await next_cmd(
+            engine,
+            CommunityData(SNMP_COMMUNITY, mpModel=1),
+            transport_target,
+            ContextData(),
+            ObjectType(ObjectIdentity(current_oid)),
+            lexicographicMode=False,
+        )
+
+        if error_indication:
+            break
+        if error_status or not var_binds:
+            break
+
+        stop_walk = False
         for var_bind in var_binds:
-            rows.append((var_bind[0].prettyPrint(), var_bind[1].prettyPrint()))
+            name = var_bind[0].prettyPrint()
+            if not name.startswith(base_oid):
+                stop_walk = True
+                break
+            rows.append((name, var_bind[1].prettyPrint()))
+
+        if stop_walk:
+            break
+
+        next_oid = var_binds[-1][0].prettyPrint()
+        if next_oid == current_oid:
+            break
+        current_oid = next_oid
 
     return rows
 
