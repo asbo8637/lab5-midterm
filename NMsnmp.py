@@ -60,7 +60,7 @@ async def get_transport_target(host: str):
 async def snmp_walk(host: str, oid: str) -> List[Tuple[str, str]]:
     rows: List[Tuple[str, str]] = []
     transport_target = await get_transport_target(host)
-    iterator = next_cmd(
+    iterator = await next_cmd(
         SnmpEngine(),
         CommunityData(SNMP_COMMUNITY, mpModel=1),
         transport_target,
