@@ -1,18 +1,33 @@
 #!/usr/bin/env python3
+import asyncio
 import ipaddress
 import json
 from typing import Dict, List, Tuple
 
-from pysnmp.hlapi.v3arch import (
-    CommunityData,
-    ContextData,
-    ObjectIdentity,
-    ObjectType,
-    SnmpEngine,
-    UdpTransportTarget,
-    Udp6TransportTarget,
-    nextCmd,
-)
+try:
+    from pysnmp.hlapi.v3arch.asyncio import (
+        CommunityData,
+        ContextData,
+        ObjectIdentity,
+        ObjectType,
+        SnmpEngine,
+        UdpTransportTarget,
+        Udp6TransportTarget,
+        next_cmd,
+    )
+    USE_ASYNC_SNMP = True
+except ImportError:
+    from pysnmp.hlapi import (
+        CommunityData,
+        ContextData,
+        ObjectIdentity,
+        ObjectType,
+        SnmpEngine,
+        UdpTransportTarget,
+        Udp6TransportTarget,
+        nextCmd,
+    )
+    USE_ASYNC_SNMP = False
 
 ROUTERS = {
     "R1": "2001:db8:10::1",
@@ -53,7 +68,27 @@ def get_transport_target(host: str):
             retries=SNMP_RETRIES,
         )
 
+async def snmp_walk_async(host: str, oid: str) -> List[Tuple[str, str]]:
+    rows: List[Tuple[str, str]] = []
+    iterator = next_cmd(
+        SnmpEngine(),
+        CommunityData(SNMP_COMMUNITY, mpModel=1),
+        get_transport_target(host),
+        ContextData(),
+        ObjectType(ObjectIdentity(oid)),
+        lexicographicMode=False,
+    )
+    async for _, _, _, var_binds in iterator:
+        for var_bind in var_binds:
+            rows.append((var_bind[0].prettyPrint(), var_bind[1].prettyPrint()))
+
+    return rows
+
+
 def snmp_walk(host: str, oid: str) -> List[Tuple[str, str]]:
+    if USE_ASYNC_SNMP:
+        return asyncio.run(snmp_walk_async(host, oid))
+
     rows: List[Tuple[str, str]] = []
     iterator = nextCmd(
         SnmpEngine(),
